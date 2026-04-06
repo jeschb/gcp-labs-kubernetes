@@ -1,0 +1,15 @@
+# Kubernetes Namespace para GCP Lab
+# Creado por: Ing Jesús A. Chávez Becerra <jeschb@gmail.com>
+# Este namespace agrupa todos los recursos del laboratorio
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gcplab
+  labels:
+    app: gcp-labs
+    creator: jeschb
+    course: gcp-fundamentos-2026
+  annotations:
+    description: "Namespace para Laboratorio de Kubernetes en GCP"
+    created-by: "Ing Jesús A. Chávez Becerra"

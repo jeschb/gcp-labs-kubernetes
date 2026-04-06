@@ -1,0 +1,12 @@
+{
+  "name": "gcp-kubernetes-lab",
+  "version": "1.0.0",
+  "description": "Laboratorio GCP Kubernetes - Ing Jesús A. Chávez Becerra",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

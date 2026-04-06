@@ -1,0 +1,147 @@
+# Kubernetes Deployment - GCP Lab App
+# Creado por: Ing Jesús A. Chávez Becerra <jeschb@gmail.com>
+# Define el despliegue de la aplicación web educativa
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcp-lab-app
+  namespace: gcplab
+  labels:
+    app: gcp-lab-app
+    version: "1.0"
+    creator: jeschb
+    course: gcp-fundamentos-2026
+  annotations:
+    description: "Aplicación web educativa para laboratorio de Kubernetes"
+spec:
+  # Número inicial de réplicas (puedes escalarlo con kubectl scale)
+  replicas: 1
+  
+  # Estrategia de despliegue
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Selector para identificar los pods
+  selector:
+    matchLabels:
+      app: gcp-lab-app
+  
+  # Template para crear los pods
+  template:
+    metadata:
+      labels:
+        app: gcp-lab-app
+        version: "1.0"
+        creator: jeschb
+      annotations:
+        description: "Pod para aplicación GCP Lab"
+    
+    spec:
+      # Contenedor de la aplicación
+      containers:
+      - name: gcp-lab-container
+        # Imagen desde Google Container Registry (GCR)
+        # Reemplaza [PROJECT_ID] con tu ID de proyecto de GCP
+        # Ejemplo: gcr.io/mi-proyecto-123456/gcp-labs-kubernetes:latest
+        image: gcr.io/[PROJECT_ID]/gcp-labs-kubernetes:latest
+        imagePullPolicy: IfNotPresent
+        
+        # Puertos expuestos
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        
+        # Variables de entorno desde ConfigMap y Secret
+        envFrom:
+        # Cargar todas las variables del ConfigMap gcplab-cm
+        - configMapRef:
+            name: gcplab-cm
+        # Cargar todas las variables del Secret gcplab-secret
+        - secretRef:
+            name: gcplab-secret
+        
+        # Variables de entorno individuales
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        
+        # Límites de recursos
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        
+        # Liveness Probe - reinicia el pod si no responde
+        livenessProbe:
+          httpGet:
+            path: /api/pod-info
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # Readiness Probe - marca el pod como listo
+        readinessProbe:
+          httpGet:
+            path: /api/pod-info
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        
+        # Volúmenes montados (opcional)
+        # volumeMounts:
+        # - name: config
+        #   mountPath: /etc/config
+      
+      # Volúmenes (opcional)
+      # volumes:
+      # - name: config
+      #   configMap:
+      #     name: gcp-lab-config
+      
+      # Política de reinicio
+      restartPolicy: Always
+      
+      # Detalles del pod
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
+
+---
+# Pod Disruption Budget - para high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gcp-lab-app-pdb
+  namespace: gcplab
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gcp-lab-app

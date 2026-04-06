@@ -1,0 +1,58 @@
+# Kubernetes Service - GCP Lab App
+# Creado por: Ing Jesús A. Chávez Becerra <jeschb@gmail.com>
+# Define cómo acceder a la aplicación
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-lab-app-service
+  namespace: gcplab
+  labels:
+    app: gcp-lab-app
+    creator: jeschb
+    course: gcp-fundamentos-2026
+  annotations:
+    description: "Servicio para acceder a la aplicación GCP Lab"
+
+spec:
+  # Tipo de servicio
+  type: LoadBalancer
+  
+  # Selector para encontrar los pods
+  selector:
+    app: gcp-lab-app
+  
+  # Puerto del servicio
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 3000
+  
+  # Sesión persistente (opcional)
+  sessionAffinity: None
+
+---
+# ClusterIP Service - acceso interno
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-lab-app-internal
+  namespace: gcplab
+  labels:
+    app: gcp-lab-app
+    creator: jeschb
+  annotations:
+    description: "Servicio interno para la aplicación GCP Lab"
+
+spec:
+  type: ClusterIP
+  
+  selector:
+    app: gcp-lab-app
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 3000
+    targetPort: 3000

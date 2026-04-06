@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCP Kubernetes Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .gcp-logo {
+            font-size: 3em;
+            margin: 10px 0;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .info-section {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .info-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .pod-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 1.1em;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        .commands-section {
+            background: #f0f4ff;
+            border-left: 4px solid #764ba2;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+
+        .commands-section h2 {
+            color: #764ba2;
+            margin-bottom: 15px;
+        }
+
+        .command-group {
+            margin: 15px 0;
+        }
+
+        .command-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .command-box {
+            background: #1e1e2e;
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+            cursor: pointer;
+            border: 1px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .command-box:hover {
+            background: #2a2a3e;
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 8px;
+            transition: background 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+
+        .step-section {
+            background: #e8f4f8;
+            border-left: 4px solid #009aa5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .step-section h2 {
+            color: #009aa5;
+            margin-bottom: 15px;
+        }
+
+        .step {
+            background: white;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 3px solid #009aa5;
+        }
+
+        .step-number {
+            background: #009aa5;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .teacher-credit {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .teacher-credit strong {
+            color: #856404;
+        }
+
+        .teacher-credit a {
+            color: #856404;
+            text-decoration: none;
+        }
+
+        .teacher-credit a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .pod-info {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="gcp-logo">☁️</div>
+            <h1>GCP - Kubernetes Lab</h1>
+            <p class="subtitle">Laboratorio Interactivo de Kubernetes en GCP</p>
+        </header>
+
+        <div class="teacher-credit">
+            <strong>👨‍🏫 Docente Creador:</strong><br>
+            Ing Jesús A. Chávez Becerra<br>
+            <a href="mailto:jeschb@gmail.com">jeschb@gmail.com</a>
+        </div>
+
+        <!-- Pod Information Section -->
+        <div class="info-section">
+            <h2>📊 Información del Pod Actual</h2>
+            <div class="status loading" id="status">
+                <span class="status-indicator"></span>
+                Cargando información del pod...
+            </div>
+            <div class="pod-info" id="podInfo">
+                <!-- Será llenado por JavaScript -->
+            </div>
+        </div>
+
+        <!-- Scaling Commands Section -->
+        <div class="commands-section">
+            <h2>⚙️ Comandos kubectl para Escalado</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                Utiliza estos comandos en tu terminal para escalar el deployment. 
+                Recuerda que estamos trabajando en el namespace <code style="background: #333; color: #0f0; padding: 2px 6px; border-radius: 3px;">gcplab</code>
+            </p>
+
+            <div class="command-group">
+                <div class="command-title">📈 Escalar UP (aumentar réplicas a 3):</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl scale deployment gcp-lab-app --replicas=3 -n gcplab</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+
+            <div class="command-group">
+                <div class="command-title">📉 Escalar DOWN (reducir a 1 réplica):</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl scale deployment gcp-lab-app --replicas=1 -n gcplab</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+
+            <div class="command-group">
+                <div class="command-title">👀 Ver todos los pods:</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl get pods -n gcplab</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+
+            <div class="command-group">
+                <div class="command-title">📋 Descripción del deployment:</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl describe deployment gcp-lab-app -n gcplab</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+
+            <div class="command-group">
+                <div class="command-title">📊 Ver recursos (todo):</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl get all -n gcplab</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+
+            <div class="command-group">
+                <div class="command-title">👁️ Monitorear pods en tiempo real:</div>
+                <div class="command-box" onclick="copyToClipboard(this)">kubectl get pods -n gcplab --watch</div>
+                <button class="copy-btn" onclick="copyCommand(this)">📋 Copiar</button>
+            </div>
+        </div>
+
+        <!-- Learning Steps -->
+        <div class="step-section">
+            <h2>📚 Pasos de Aprendizaje</h2>
+
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Crear el namespace:</strong> Primero, crea el namespace gcplab para organizar tus recursos.
+                <div class="command-box" style="margin-top: 8px;">kubectl create namespace gcplab</div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Desplegar la aplicación:</strong> Usa kubectl apply para desplegar todos los recursos YAML.
+                <div class="command-box" style="margin-top: 8px;">kubectl apply -f devops/</div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Verificar el despliegue:</strong> Confirma que el pod se está ejecutando correctamente.
+                <div class="command-box" style="margin-top: 8px;">kubectl get pods -n gcplab</div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Escalar el deployment:</strong> Aumenta o disminuye el número de réplicas según sea necesario.
+                <div class="command-box" style="margin-top: 8px;">kubectl scale deployment gcp-lab-app --replicas=3 -n gcplab</div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">5</span>
+                <strong>Monitorear en tiempo real:</strong> Observa cómo se crean y terminan los pods.
+                <div class="command-box" style="margin-top: 8px;">kubectl get pods -n gcplab --watch</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🎓 <strong>GCP Kubernetes Lab</strong> - Sistema de Laboratorio Educativo</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">
+                Creado por: <strong>Ing Jesús A. Chávez Becerra</strong> | 
+                <a href="mailto:jeschb@gmail.com" style="color: #667eea; text-decoration: none;">jeschb@gmail.com</a>
+            </p>
+            <p style="margin-top: 5px; font-size: 0.8em; color: #999;">
+                © 2026 - Fundamentos GCP - Laboratorio de Kubernetes
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Cargar información del pod
+        async function loadPodInfo() {
+            try {
+                const response = await fetch('/api/pod-info');
+                const data = await response.json();
+                
+                const podInfoDiv = document.getElementById('podInfo');
+                const statusDiv = document.getElementById('status');
+                
+                podInfoDiv.innerHTML = `
+                    <div class="info-item">
+                        <div class="info-label">🏷️ Nombre del Pod:</div>
+                        <div class="info-value">${data.podName}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">📦 Namespace:</div>
+                        <div class="info-value">${data.namespace}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">🔗 Hostname del Nodo:</div>
+                        <div class="info-value">${data.nodeHostname}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">💻 Plataforma:</div>
+                        <div class="info-value">${data.platform}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">⏰ Timestamp:</div>
+                        <div class="info-value">${new Date(data.timestamp).toLocaleString('es-MX')}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">🏗️ Arquitectura:</div>
+                        <div class="info-value">${data.arch}</div>
+                    </div>
+                `;
+                
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = '<span class="status-indicator"></span>✅ Información cargada correctamente';
+            } catch (error) {
+                const statusDiv = document.getElementById('status');
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '❌ Error al cargar información: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+
+        // Función para copiar comando al portapapeles
+        function copyCommand(button) {
+            const commandBox = button.previousElementSibling;
+            const text = commandBox.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '✅ ¡Copiado!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+                alert('No se pudo copiar: ' + text);
+            });
+        }
+
+        // Función para copiar al hacer click en el comando
+        function copyToClipboard(element) {
+            const text = element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalColor = element.style.background;
+                element.style.background = '#4caf50';
+                setTimeout(() => {
+                    element.style.background = originalColor;
+                }, 500);
+            }).catch(err => console.error('Error:', err));
+        }
+
+        // Cargar información cuando la página se carga
+        window.addEventListener('load', loadPodInfo);
+
+        // Recargar información cada 10 segundos
+        setInterval(loadPodInfo, 10000);
+    </script>
+</body>
+</html>

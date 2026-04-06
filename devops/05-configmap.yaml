@@ -1,0 +1,32 @@
+# Kubernetes ConfigMap - GCP Lab
+# Creado por: Ing Jesús A. Chávez Becerra <jeschb@gmail.com>
+# Configuración no sensible para el laboratorio
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcplab-cm
+  namespace: gcplab
+  labels:
+    app: gcp-lab-app
+    creator: jeschb
+    course: gcp-fundamentos-2026
+  annotations:
+    description: "ConfigMap para configuracion del laboratorio GCP"
+    created-by: "Ing Jesús A. Chávez Becerra"
+
+data:
+  NAMESPACE_NAME: "gcplab"
+  APP_NAME: "gcp-labs-kubernetes"
+  LAB_DESCRIPTION: "Laboratorio Interactivo de Kubernetes en GCP"
+  COURSE_VERSION: "2026-03-GCP-Fundamentos"
+  
+  app-config.json: |
+    {
+      "lab_name": "GCP Kubernetes Lab",
+      "created_by": "Ing Jesús A. Chávez Becerra",
+      "email": "jeschb@gmail.com",
+      "version": "1.0.0",
+      "namespace": "gcplab",
+      "educational_level": "Fundamentos"
+    }
