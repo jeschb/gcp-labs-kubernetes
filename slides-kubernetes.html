@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kubernetes — GCP Fundamentos 2026</title>
+  <style>
+    :root {
+      --k8s-blue:    #326CE5;
+      --k8s-dark:    #0d1117;
+      --k8s-navy:    #1a2332;
+      --k8s-card:    #1e2d3d;
+      --k8s-border:  #2d4a6b;
+      --k8s-accent:  #5ba3f5;
+      --k8s-green:   #3fb950;
+      --k8s-yellow:  #f0c040;
+      --k8s-red:     #f85149;
+      --k8s-purple:  #a371f7;
+      --text-main:   #e6edf3;
+      --text-muted:  #8b949e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--k8s-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ── SLIDES CONTAINER ───────────────────────────────────────── */
+    .slides-wrapper {
+      display: flex;
+      transition: transform 0.5s cubic-bezier(.77,0,.18,1);
+      height: 100vh;
+    }
+
+    .slide {
+      min-width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* slide-specific backgrounds */
+    .slide-1  { background: linear-gradient(135deg, #0d1117 0%, #1a2d4e 50%, #0d2137 100%); }
+    .slide-2  { background: linear-gradient(135deg, #0d1117 0%, #1a2332 100%); }
+    .slide-3  { background: linear-gradient(135deg, #0d1117 0%, #1e2d1e 100%); }
+    .slide-4  { background: linear-gradient(135deg, #0d1117 0%, #2d1e3d 100%); }
+    .slide-5  { background: linear-gradient(135deg, #0d1117 0%, #1e2d2d 100%); }
+    .slide-6  { background: linear-gradient(135deg, #0d1117 0%, #2d2b1e 100%); }
+    .slide-7  { background: linear-gradient(135deg, #0d1117 0%, #1e2d3d 100%); }
+    .slide-8  { background: linear-gradient(135deg, #0d1117 0%, #2d1e2d 100%); }
+    .slide-9  { background: linear-gradient(135deg, #0d1117 0%, #1a2d1e 100%); }
+    .slide-10 { background: linear-gradient(135deg, #0d1117 0%, #1a2d4e 100%); }
+
+    /* ── NAV ────────────────────────────────────────────────────── */
+    .nav {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      z-index: 100;
+      background: rgba(13,17,23,.85);
+      border: 1px solid var(--k8s-border);
+      border-radius: 40px;
+      padding: 10px 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav button {
+      background: var(--k8s-card);
+      border: 1px solid var(--k8s-border);
+      color: var(--text-main);
+      padding: 8px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background .2s, border-color .2s;
+    }
+    .nav button:hover { background: var(--k8s-blue); border-color: var(--k8s-blue); }
+
+    #slide-counter {
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 56px;
+      text-align: center;
+    }
+
+    .dot-row { display: flex; gap: 6px; align-items: center; }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--k8s-border);
+      cursor: pointer;
+      transition: background .2s, transform .2s;
+    }
+    .dot.active { background: var(--k8s-blue); transform: scale(1.4); }
+
+    /* ── SHARED COMPONENTS ──────────────────────────────────────── */
+    .slide-tag {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--k8s-accent);
+      margin-bottom: 12px;
+    }
+
+    h1 { font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 700; line-height: 1.15; }
+    h2 { font-size: clamp(1.5rem, 2.5vw, 2.2rem); font-weight: 700; margin-bottom: 28px; }
+    h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 560px;
+      text-align: center;
+      line-height: 1.6;
+      margin-top: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(50,108,229,.18);
+      border: 1px solid var(--k8s-blue);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      color: var(--k8s-accent);
+      margin-top: 20px;
+    }
+
+    /* card grid */
+    .grid { display: grid; gap: 16px; width: 100%; max-width: 1100px; }
+    .g2 { grid-template-columns: repeat(2, 1fr); }
+    .g3 { grid-template-columns: repeat(3, 1fr); }
+    .g4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: var(--k8s-card);
+      border: 1px solid var(--k8s-border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+    .card .icon { font-size: 2rem; margin-bottom: 10px; }
+    .card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.55; margin-top: 6px; }
+
+    .card.blue   { border-top: 3px solid var(--k8s-blue); }
+    .card.green  { border-top: 3px solid var(--k8s-green); }
+    .card.yellow { border-top: 3px solid var(--k8s-yellow); }
+    .card.red    { border-top: 3px solid var(--k8s-red); }
+    .card.purple { border-top: 3px solid var(--k8s-purple); }
+
+    /* code block */
+    .code-block {
+      background: #010409;
+      border: 1px solid var(--k8s-border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      width: 100%;
+      max-width: 700px;
+      overflow: auto;
+    }
+    .code-block .k  { color: var(--k8s-purple); }
+    .code-block .v  { color: var(--k8s-green); }
+    .code-block .c  { color: var(--text-muted); font-style: italic; }
+    .code-block .s  { color: var(--k8s-yellow); }
+
+    /* arch diagram */
+    .arch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .arch-box {
+      background: var(--k8s-card);
+      border: 2px solid var(--k8s-border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .arch-box .icon { font-size: 1.6rem; }
+    .arch-box span  { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .arrow { font-size: 1.4rem; color: var(--k8s-blue); }
+
+    /* probe table */
+    .probe-row {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .probe-card {
+      flex: 1;
+      background: var(--k8s-card);
+      border: 1px solid var(--k8s-border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .probe-card h3 { font-size: 0.95rem; }
+    .probe-card p  { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
+    .probe-card .pill {
+      display: inline-block;
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .pill-green  { background: rgba(63,185,80,.18); color: var(--k8s-green); }
+    .pill-blue   { background: rgba(50,108,229,.18); color: var(--k8s-accent); }
+    .pill-yellow { background: rgba(240,192,64,.18); color: var(--k8s-yellow); }
+
+    /* step list */
+    .steps { list-style: none; width: 100%; max-width: 860px; }
+    .steps li {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--k8s-border);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .step-num {
+      width: 28px; height: 28px;
+      background: var(--k8s-blue);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .steps li p  { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* resource bar */
+    .res-row { display: flex; gap: 16px; width: 100%; max-width: 900px; }
+    .res-card {
+      flex: 1;
+      background: var(--k8s-card);
+      border: 1px solid var(--k8s-border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .bar-wrap { margin-top: 8px; background: var(--k8s-border); border-radius: 4px; height: 6px; }
+    .bar { height: 6px; border-radius: 4px; }
+    .bar-req  { background: var(--k8s-blue); }
+    .bar-lim  { background: var(--k8s-yellow); }
+    .bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    /* K8s wheel SVG */
+    .wheel { width: 120px; height: 120px; flex-shrink: 0; }
+
+    /* decorative background glow */
+    .glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .15;
+      pointer-events: none;
+    }
+    .glow-blue   { width: 400px; height: 400px; background: var(--k8s-blue); }
+    .glow-green  { width: 300px; height: 300px; background: var(--k8s-green); }
+    .glow-purple { width: 350px; height: 350px; background: var(--k8s-purple); }
+
+    /* ── SLIDE 1 — TITLE ────────────────────────────────────────── */
+    .slide-1 { text-align: center; }
+    .k8s-logo {
+      width: 110px; height: 110px;
+      margin-bottom: 28px;
+    }
+
+    /* ── SLIDE 10 — CLOSING ─────────────────────────────────────── */
+    .cmd-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 860px;
+    }
+    .cmd-item {
+      background: #010409;
+      border: 1px solid var(--k8s-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: var(--k8s-green);
+    }
+    .cmd-item span { color: var(--text-muted); display: block; font-family: 'Segoe UI', sans-serif; font-size: 11px; margin-top: 2px; }
+
+    /* responsive tweaks */
+    @media (max-width: 768px) {
+      .g3, .g4 { grid-template-columns: 1fr 1fr; }
+      .g2 { grid-template-columns: 1fr; }
+      .probe-row, .res-row { flex-direction: column; }
+      .cmd-grid { grid-template-columns: 1fr; }
+      .slide { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ SLIDES WRAPPER ═══════════════════════ -->
+<div class="slides-wrapper" id="slider">
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 1 — PORTADA ━━━━━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-1">
+    <div class="glow glow-blue" style="top:-100px;left:-100px;"></div>
+    <div class="glow glow-purple" style="bottom:-80px;right:-80px;"></div>
+
+    <!-- Kubernetes wheel SVG -->
+    <svg class="k8s-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="#326CE5" opacity=".15" stroke="#326CE5" stroke-width="2"/>
+      <circle cx="50" cy="50" r="36" fill="none" stroke="#326CE5" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <circle cx="50" cy="50" r="14" fill="#326CE5"/>
+      <text x="50" y="55" text-anchor="middle" font-size="14" font-weight="bold" fill="white">K8s</text>
+      <!-- spokes -->
+      <g stroke="#5ba3f5" stroke-width="2.5">
+        <line x1="50" y1="14" x2="50" y2="36"/>
+        <line x1="50" y1="64" x2="50" y2="86"/>
+        <line x1="81" y1="32" x2="64" y2="41"/>
+        <line x1="36" y1="59" x2="19" y2="68"/>
+        <line x1="81" y1="68" x2="64" y2="59"/>
+        <line x1="36" y1="41" x2="19" y2="32"/>
+      </g>
+      <!-- hub dots -->
+      <g fill="#5ba3f5">
+        <circle cx="50" cy="10" r="5"/>
+        <circle cx="50" cy="90" r="5"/>
+        <circle cx="84" cy="30" r="5"/>
+        <circle cx="16" cy="70" r="5"/>
+        <circle cx="84" cy="70" r="5"/>
+        <circle cx="16" cy="30" r="5"/>
+      </g>
+    </svg>
+
+    <div class="slide-tag">GCP Fundamentos 2026 — Laboratorio de Kubernetes</div>
+    <h1>Kubernetes<br><span style="color:var(--k8s-accent)">en la Práctica</span></h1>
+    <p class="subtitle">Conceptos fundamentales, arquitectura y despliegue en GCP basados en el laboratorio <strong>gcp-labs-kubernetes</strong>.</p>
+    <div class="badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+      Ing. Jesús A. Chávez Becerra · 2026
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 2 — ¿QUÉ ES KUBERNETES? ━━━━━━━━━━━━━━ -->
+  <div class="slide slide-2">
+    <div class="glow glow-blue" style="top:-50px;right:-50px;"></div>
+    <div class="slide-tag">Slide 02 — Introducción</div>
+    <h2>¿Qué es <span style="color:var(--k8s-accent)">Kubernetes</span>?</h2>
+
+    <div class="grid g2" style="max-width:900px">
+      <div class="card blue">
+        <div class="icon">🚢</div>
+        <h3>Orquestador de contenedores</h3>
+        <p>Kubernetes automatiza el despliegue, escalado y operación de aplicaciones en contenedores. El nombre viene del griego "timonel de barco".</p>
+      </div>
+      <div class="card green">
+        <div class="icon">🔧</div>
+        <h3>Open Source desde 2014</h3>
+        <p>Creado por Google y donado a la CNCF. Basado en el sistema interno Borg. Actualmente el estándar de la industria para orquestación.</p>
+      </div>
+      <div class="card yellow">
+        <div class="icon">⚡</div>
+        <h3>Auto-recuperación</h3>
+        <p>Reinicia contenedores fallidos, reemplaza pods caídos, elimina los que no pasan health checks y no los expone hasta que estén listos.</p>
+      </div>
+      <div class="card purple">
+        <div class="icon">📦</div>
+        <h3>Agnóstico a la nube</h3>
+        <p>Funciona en GCP (GKE), AWS (EKS), Azure (AKS), on-premise o incluso en tu laptop con minikube/kind.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:22px;font-size:0.8rem;color:var(--text-muted);text-align:center;">
+      En este lab usamos <strong style="color:var(--k8s-accent)">Google Kubernetes Engine (GKE)</strong> con namespace <code style="color:var(--k8s-yellow)">gcplab</code>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 3 — ARQUITECTURA ━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-3">
+    <div class="glow glow-green" style="bottom:-60px;left:-60px;"></div>
+    <div class="slide-tag">Slide 03 — Arquitectura</div>
+    <h2>Arquitectura del <span style="color:var(--k8s-green)">Clúster</span></h2>
+
+    <div class="arch" style="width:100%;max-width:1000px;margin-bottom:20px;">
+      <div class="arch-box" style="border-color:var(--k8s-blue);">
+        <div class="icon">👤</div>
+        <strong>kubectl</strong>
+        <span>CLI / Dev</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="arch-box" style="border-color:var(--k8s-blue);background:#0d2137;">
+        <div class="icon">🧠</div>
+        <strong>Control Plane</strong>
+        <span>API Server · etcd<br>Scheduler · Controller</span>
+      </div>
+      <div class="arrow">→</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="arch-box" style="border-color:var(--k8s-green);">
+          <div class="icon">🖥️</div>
+          <strong>Node 1</strong>
+          <span>kubelet · kube-proxy<br>Pod: gcp-lab-app</span>
+        </div>
+        <div class="arch-box" style="border-color:var(--k8s-green);opacity:.7;">
+          <div class="icon">🖥️</div>
+          <strong>Node 2</strong>
+          <span>kubelet · kube-proxy<br>(escala horizontal)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g3" style="max-width:900px;">
+      <div class="card">
+        <h3>🧠 Control Plane</h3>
+        <p><strong>API Server:</strong> punto de entrada de todas las operaciones.<br><strong>etcd:</strong> base de datos distribuida del estado del clúster.<br><strong>Scheduler:</strong> asigna pods a nodos.</p>
+      </div>
+      <div class="card">
+        <h3>🖥️ Worker Node</h3>
+        <p><strong>kubelet:</strong> agente que ejecuta los pods.<br><strong>kube-proxy:</strong> maneja el networking.<br><strong>Container Runtime:</strong> Docker / containerd.</p>
+      </div>
+      <div class="card">
+        <h3>📦 Pod</h3>
+        <p>Unidad mínima de K8s. Uno o más contenedores que comparten red y almacenamiento. En este lab: <code style="color:var(--k8s-yellow)">gcp-lab-app</code> en puerto 3000.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 4 — NAMESPACE ━━━━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-4">
+    <div class="glow glow-purple" style="top:-80px;right:-80px;"></div>
+    <div class="slide-tag">Slide 04 — Namespaces</div>
+    <h2>Aislamiento con <span style="color:var(--k8s-purple)">Namespaces</span></h2>
+
+    <div style="display:flex;gap:32px;align-items:flex-start;width:100%;max-width:1000px;">
+      <div class="code-block" style="max-width:420px;flex-shrink:0;">
+<span class="c"># devops/01-namespace.yaml</span>
+<span class="k">apiVersion:</span> <span class="v">v1</span>
+<span class="k">kind:</span>       <span class="v">Namespace</span>
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="s">gcplab</span>
+  <span class="k">labels:</span>
+    <span class="k">app:</span>     <span class="v">gcp-labs</span>
+    <span class="k">creator:</span> <span class="v">jeschb</span>
+    <span class="k">course:</span>  <span class="v">gcp-fundamentos-2026</span>
+  <span class="k">annotations:</span>
+    <span class="k">description:</span> <span class="s">"Namespace para
+      Laboratorio de Kubernetes en GCP"</span>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px;">
+        <div class="card blue">
+          <h3>🔲 ¿Para qué sirven?</h3>
+          <p>Particionan un clúster físico en múltiples clústeres virtuales. Permiten separar ambientes: <em>dev</em>, <em>staging</em>, <em>prod</em>.</p>
+        </div>
+        <div class="card green">
+          <h3>🏷️ Labels y Annotations</h3>
+          <p><strong>Labels:</strong> pares clave-valor para selección y agrupación.<br><strong>Annotations:</strong> metadata arbitraria legible por humanos o herramientas.</p>
+        </div>
+        <div class="card yellow">
+          <h3>🛡️ Aislamiento de recursos</h3>
+          <p>Con <code>ResourceQuota</code> y <code>LimitRange</code> puedes controlar cuántos recursos consume cada namespace.</p>
+        </div>
+        <div style="background:rgba(50,108,229,.1);border:1px solid var(--k8s-blue);border-radius:8px;padding:10px 14px;font-size:0.78rem;">
+          <code style="color:var(--k8s-green)">kubectl get all -n gcplab</code>
+          <span style="color:var(--text-muted);margin-left:12px;">→ lista todos los recursos del namespace</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 5 — DEPLOYMENT ━━━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-5">
+    <div class="glow glow-blue" style="bottom:-80px;left:-80px;"></div>
+    <div class="slide-tag">Slide 05 — Deployments</div>
+    <h2>Deployments y <span style="color:var(--k8s-accent)">ReplicaSets</span></h2>
+
+    <div style="display:flex;gap:28px;width:100%;max-width:1050px;align-items:flex-start;">
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+        <div class="card blue">
+          <h3>📋 Deployment <code style="font-weight:400;color:var(--k8s-yellow)">gcp-lab-app</code></h3>
+          <p>Describe el <em>estado deseado</em>. Kubernetes trabaja continuamente para mantenerlo.<br>
+          Imagen: <code style="color:var(--k8s-green)">gcr.io/[PROJECT_ID]/gcp-labs-kubernetes:latest</code></p>
+        </div>
+        <div class="card green">
+          <h3>🔄 Rolling Update (Zero Downtime)</h3>
+          <p><code>maxSurge: 1</code> — puede haber 1 pod extra durante la actualización.<br>
+          <code>maxUnavailable: 0</code> — nunca baja la disponibilidad durante el rollout.</p>
+        </div>
+        <div class="card purple">
+          <h3>📐 Escalado horizontal</h3>
+          <p>Empezamos con <strong>1 réplica</strong>. Se puede escalar en caliente:</p>
+          <code style="font-size:0.75rem;color:var(--k8s-green)">kubectl scale deployment gcp-lab-app --replicas=3 -n gcplab</code>
+        </div>
+      </div>
+
+      <div class="code-block" style="max-width:420px;flex-shrink:0;align-self:center;">
+<span class="c"># devops/02-deployment.yaml (extracto)</span>
+<span class="k">kind:</span> <span class="v">Deployment</span>
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> <span class="v">1</span>
+  <span class="k">strategy:</span>
+    <span class="k">type:</span> <span class="v">RollingUpdate</span>
+    <span class="k">rollingUpdate:</span>
+      <span class="k">maxSurge:</span>       <span class="v">1</span>
+      <span class="k">maxUnavailable:</span> <span class="v">0</span>
+  <span class="k">template:</span>
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+      - <span class="k">name:</span>  <span class="v">gcp-lab-app</span>
+        <span class="k">image:</span> <span class="v">gcr.io/.../gcp-labs-kubernetes</span>
+        <span class="k">ports:</span>
+        - <span class="k">containerPort:</span> <span class="v">3000</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 6 — SERVICES ━━━━━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-6">
+    <div class="glow glow-yellow" style="top:-100px;right:-60px;opacity:.1;background:var(--k8s-yellow);width:300px;height:300px;border-radius:50%;filter:blur(80px);position:absolute;pointer-events:none;"></div>
+    <div class="slide-tag">Slide 06 — Services</div>
+    <h2>Networking con <span style="color:var(--k8s-yellow)">Services</span></h2>
+
+    <div style="display:flex;gap:24px;width:100%;max-width:1050px;flex-wrap:wrap;">
+      <!-- diagram -->
+      <div style="flex:1;min-width:280px;">
+        <div style="border:1px solid var(--k8s-border);border-radius:14px;padding:20px;background:rgba(30,45,61,.6);">
+          <div style="text-align:center;margin-bottom:16px;font-size:0.75rem;color:var(--text-muted);">FLUJO DE RED — devops/03-service.yaml</div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:center;font-size:0.82rem;">
+            <div style="background:rgba(50,108,229,.2);border:1px solid var(--k8s-blue);border-radius:8px;padding:8px 24px;">🌐 Internet / Usuario</div>
+            <div class="arrow">↓ port 80</div>
+            <div style="background:rgba(240,192,64,.18);border:1px solid var(--k8s-yellow);border-radius:8px;padding:8px 24px;">☁️ LoadBalancer Service<br><code style="font-size:10px;color:var(--k8s-yellow)">gcp-lab-app-service</code></div>
+            <div class="arrow">↓ targetPort 3000</div>
+            <div style="background:rgba(63,185,80,.18);border:1px solid var(--k8s-green);border-radius:8px;padding:8px 24px;">📦 Pod: gcp-lab-app:3000</div>
+            <div class="arrow">↑↓ ClusterIP</div>
+            <div style="background:rgba(167,113,247,.18);border:1px solid var(--k8s-purple);border-radius:8px;padding:8px 24px;">🔒 ClusterIP Service<br><code style="font-size:10px;color:var(--k8s-purple)">gcp-lab-app-internal</code></div>
+            <div style="font-size:10px;color:var(--text-muted);">Solo accesible dentro del clúster</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- cards -->
+      <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:12px;">
+        <div class="card yellow">
+          <h3>☁️ LoadBalancer</h3>
+          <p>Crea una IP externa en GCP. Ideal para exponer la app al mundo. Kubernetes pide automáticamente un balanceador de carga al cloud provider.</p>
+        </div>
+        <div class="card purple">
+          <h3>🔒 ClusterIP</h3>
+          <p>Solo accesible dentro del clúster. Perfecto para microservicios que se comunican entre sí sin exposición externa.</p>
+        </div>
+        <div class="card green">
+          <h3>🔎 Service Discovery</h3>
+          <p>K8s proporciona DNS interno automático. Otros pods pueden llamar al servicio por nombre: <code style="color:var(--k8s-green)">gcp-lab-app-internal.gcplab.svc.cluster.local</code></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 7 — CONFIGMAP & SECRET ━━━━━━━━━━ -->
+  <div class="slide slide-7">
+    <div class="glow glow-blue" style="top:-60px;left:-60px;"></div>
+    <div class="slide-tag">Slide 07 — Configuración</div>
+    <h2><span style="color:var(--k8s-accent)">ConfigMap</span> &amp; <span style="color:var(--k8s-red)">Secret</span></h2>
+
+    <div style="display:flex;gap:24px;width:100%;max-width:1050px;">
+      <!-- ConfigMap -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+        <div class="card blue">
+          <h3>📋 ConfigMap — <code style="font-weight:400">gcplab-cm</code></h3>
+          <p>Almacena configuración <em>no sensible</em> como variables de entorno o archivos de configuración.</p>
+        </div>
+        <div class="code-block">
+<span class="c"># devops/05-configmap.yaml</span>
+<span class="k">data:</span>
+  <span class="k">NAMESPACE_NAME:</span>   <span class="s">"gcplab"</span>
+  <span class="k">APP_NAME:</span>         <span class="s">"gcp-labs-kubernetes"</span>
+  <span class="k">LAB_DESCRIPTION:</span>  <span class="s">"Laboratorio
+    Interactivo de Kubernetes en GCP"</span>
+  <span class="k">COURSE_VERSION:</span>   <span class="s">"2026-03-GCP"</span>
+  <span class="k">app-config.json:</span> <span class="v">|</span>
+    <span class="c">{ "creator": "Ing. Jesús Chávez",
+      "version": "1.0.0" }</span>
+        </div>
+      </div>
+
+      <!-- Secret -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:12px;">
+        <div class="card red">
+          <h3>🔐 Secret — <code style="font-weight:400">gcplab-secret</code></h3>
+          <p>Almacena datos sensibles en <strong>Base64</strong>. ⚠️ No es cifrado — para producción usa <em>Sealed Secrets</em> o <em>GCP Secret Manager</em>.</p>
+        </div>
+        <div class="code-block">
+<span class="c"># devops/06-secret.yaml</span>
+<span class="k">type:</span> <span class="v">Opaque</span>
+<span class="k">data:</span>
+  <span class="c"># valores en Base64 (no cifrado)</span>
+  <span class="k">APP_CREATION_TIMESTAMP:</span>
+    <span class="s">MjAyNi0wNC0wNlQwMD...</span>
+  <span class="k">TEACHER_EMAIL:</span>
+    <span class="s">amVzY2hiQGdtYWlsLmNvbQ==</span>
+  <span class="k">TEACHER_NAME:</span>
+    <span class="s">SW5nIEplc8O6cy4uLg==</span>
+        </div>
+        <div style="background:rgba(248,81,73,.1);border:1px solid var(--k8s-red);border-radius:8px;padding:10px 14px;font-size:0.75rem;color:var(--k8s-red);">
+          ⚠️ Nunca subas Secrets sin cifrar a git. Usa <strong>.gitignore</strong> o herramientas como <strong>Sealed Secrets / SOPS</strong>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 8 — HEALTH CHECKS ━━━━━━━━━━━━━━ -->
+  <div class="slide slide-8">
+    <div class="glow glow-purple" style="bottom:-80px;right:-80px;"></div>
+    <div class="slide-tag">Slide 08 — Observabilidad</div>
+    <h2>Health Checks: <span style="color:var(--k8s-green)">Liveness</span> &amp; <span style="color:var(--k8s-accent)">Readiness</span></h2>
+
+    <div class="probe-row">
+      <div class="probe-card" style="border-top:3px solid var(--k8s-green);">
+        <div class="pill pill-green">Liveness Probe</div>
+        <h3>💓 ¿Está vivo el pod?</h3>
+        <p>Si falla → K8s <strong>reinicia</strong> el contenedor. Detecta deadlocks o estados irrecuperables.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="k">livenessProbe:</span>
+  <span class="k">httpGet:</span>
+    <span class="k">path:</span> <span class="s">/api/pod-info</span>
+    <span class="k">port:</span> <span class="v">3000</span>
+  <span class="k">initialDelaySeconds:</span> <span class="v">20</span>
+  <span class="k">periodSeconds:</span>       <span class="v">10</span>
+  <span class="k">timeoutSeconds:</span>      <span class="v">5</span>
+        </div>
+      </div>
+
+      <div class="probe-card" style="border-top:3px solid var(--k8s-accent);">
+        <div class="pill pill-blue">Readiness Probe</div>
+        <h3>✅ ¿Listo para tráfico?</h3>
+        <p>Si falla → K8s <strong>lo saca del Service</strong> (no le manda peticiones). Útil durante warmup o carga de datos.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="k">readinessProbe:</span>
+  <span class="k">httpGet:</span>
+    <span class="k">path:</span> <span class="s">/api/pod-info</span>
+    <span class="k">port:</span> <span class="v">3000</span>
+  <span class="k">initialDelaySeconds:</span> <span class="v">10</span>
+  <span class="k">periodSeconds:</span>       <span class="v">5</span>
+  <span class="k">timeoutSeconds:</span>      <span class="v">3</span>
+        </div>
+      </div>
+
+      <div class="probe-card" style="border-top:3px solid var(--k8s-yellow);">
+        <div class="pill pill-yellow">Pod Disruption Budget</div>
+        <h3>🛡️ Alta Disponibilidad</h3>
+        <p>Garantiza que siempre haya <strong>mínimo 1 pod disponible</strong> incluso durante mantenimiento del nodo o actualizaciones del clúster.</p>
+        <div class="code-block" style="margin-top:12px;">
+<span class="k">kind:</span> <span class="v">PodDisruptionBudget</span>
+<span class="k">spec:</span>
+  <span class="k">minAvailable:</span> <span class="v">1</span>
+  <span class="k">selector:</span>
+    <span class="k">matchLabels:</span>
+      <span class="k">app:</span> <span class="v">gcp-lab-app</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 9 — RECURSOS ━━━━━━━━━━━━━━━━━━━ -->
+  <div class="slide slide-9">
+    <div class="glow glow-green" style="top:-60px;left:-60px;"></div>
+    <div class="slide-tag">Slide 09 — Recursos &amp; Variables</div>
+    <h2>Gestión de <span style="color:var(--k8s-green)">Recursos</span> e Inyección de Variables</h2>
+
+    <div class="res-row" style="margin-bottom:20px;">
+      <div class="res-card" style="border-top:3px solid var(--k8s-blue);">
+        <h3>🖥️ CPU</h3>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin:6px 0 10px;">1000m = 1 núcleo virtual</p>
+        <div>
+          <div style="font-size:11px;color:var(--k8s-accent);">Request: 100m (mínimo garantizado)</div>
+          <div class="bar-wrap"><div class="bar bar-req" style="width:20%;"></div></div>
+          <div style="font-size:11px;color:var(--k8s-yellow);margin-top:6px;">Limit: 500m (máximo permitido)</div>
+          <div class="bar-wrap"><div class="bar bar-lim" style="width:50%;"></div></div>
+        </div>
+      </div>
+      <div class="res-card" style="border-top:3px solid var(--k8s-green);">
+        <h3>💾 Memoria</h3>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin:6px 0 10px;">Mi = Mebibyte (1 Mi ≈ 1.05 MB)</p>
+        <div>
+          <div style="font-size:11px;color:var(--k8s-accent);">Request: 128Mi (mínimo garantizado)</div>
+          <div class="bar-wrap"><div class="bar bar-req" style="width:25%;"></div></div>
+          <div style="font-size:11px;color:var(--k8s-yellow);margin-top:6px;">Limit: 512Mi (máximo permitido)</div>
+          <div class="bar-wrap"><div class="bar bar-lim" style="width:100%;"></div></div>
+        </div>
+      </div>
+      <div class="res-card" style="border-top:3px solid var(--k8s-purple);">
+        <h3>🌐 Variables de entorno del Pod</h3>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin:6px 0 10px;">K8s inyecta metadata del pod en tiempo de ejecución vía <em>Downward API</em>:</p>
+        <div class="code-block" style="padding:10px 14px;">
+<span class="k">env:</span>
+- <span class="k">name:</span>  <span class="v">POD_NAME</span>
+  <span class="k">valueFrom:</span>
+    <span class="k">fieldRef:</span>
+      <span class="k">fieldPath:</span> <span class="s">metadata.name</span>
+- <span class="k">name:</span>  <span class="v">POD_IP</span>
+  <span class="k">valueFrom:</span>
+    <span class="k">fieldRef:</span>
+      <span class="k">fieldPath:</span> <span class="s">status.podIP</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:rgba(63,185,80,.08);border:1px solid var(--k8s-green);border-radius:10px;padding:14px 20px;width:100%;max-width:900px;font-size:0.78rem;">
+      <strong style="color:var(--k8s-green);">Por qué importa:</strong>
+      <span style="color:var(--text-muted);"> Los <em>requests</em> determinan en qué nodo se programa el pod; los <em>limits</em> evitan que un pod consuma todos los recursos del nodo y afecte a sus vecinos.</span>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━ SLIDE 10 — FLUJO & COMANDOS ━━━━━━━━━━━ -->
+  <div class="slide slide-10">
+    <div class="glow glow-blue" style="bottom:-60px;right:-60px;"></div>
+    <div class="slide-tag">Slide 10 — Flujo de Despliegue</div>
+    <h2>Flujo de Despliegue en <span style="color:var(--k8s-accent)">GCP + kubectl</span></h2>
+
+    <div style="display:flex;gap:24px;width:100%;max-width:1060px;">
+      <ul class="steps" style="max-width:420px;flex-shrink:0;">
+        <li>
+          <div class="step-num">1</div>
+          <div>
+            <h3>Configurar GCP</h3>
+            <p><code style="color:var(--k8s-green);">gcloud auth configure-docker</code><br>Autenticar Docker con Google Container Registry.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div>
+            <h3>Build imagen Docker</h3>
+            <p><code style="color:var(--k8s-green);">docker build -t gcr.io/[PROJECT]/gcp-labs-kubernetes .</code></p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div>
+            <h3>Push a GCR</h3>
+            <p><code style="color:var(--k8s-green);">docker push gcr.io/[PROJECT]/gcp-labs-kubernetes</code></p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div>
+            <h3>Aplicar manifests en orden</h3>
+            <p><code style="color:var(--k8s-green);">kubectl apply -f devops/</code><br>namespace → configmap → secret → deployment → service</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div>
+            <h3>Acceder a la app</h3>
+            <p><code style="color:var(--k8s-green);">kubectl port-forward pod/[NAME] 3000:3000 -n gcplab</code></p>
+          </div>
+        </li>
+      </ul>
+
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Comandos kubectl esenciales del lab</div>
+        <div class="cmd-grid">
+          <div class="cmd-item">kubectl get pods -n gcplab<span>Listar todos los pods</span></div>
+          <div class="cmd-item">kubectl get deployments -n gcplab<span>Ver estado del deployment</span></div>
+          <div class="cmd-item">kubectl scale deployment gcp-lab-app --replicas=3 -n gcplab<span>Escalar a 3 réplicas</span></div>
+          <div class="cmd-item">kubectl logs &lt;pod-name&gt; -n gcplab<span>Ver logs del pod</span></div>
+          <div class="cmd-item">kubectl describe pod &lt;pod&gt; -n gcplab<span>Detalle completo del pod</span></div>
+          <div class="cmd-item">kubectl get pods -n gcplab --watch<span>Monitoreo en tiempo real</span></div>
+        </div>
+        <div style="margin-top:8px;background:rgba(50,108,229,.1);border:1px solid var(--k8s-blue);border-radius:10px;padding:12px 16px;text-align:center;">
+          <div style="font-size:0.8rem;color:var(--text-muted);">Laboratorio creado por</div>
+          <div style="font-size:1rem;font-weight:600;color:var(--k8s-accent);margin-top:4px;">Ing. Jesús A. Chávez Becerra</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">GCP Fundamentos 2026 · Namespace: <code style="color:var(--k8s-yellow)">gcplab</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides-wrapper -->
+
+<!-- ═══════════════════════ NAV BAR ═══════════════════════════════ -->
+<div class="nav">
+  <button onclick="prev()">← Anterior</button>
+  <div class="dot-row" id="dots"></div>
+  <span id="slide-counter">1 / 10</span>
+  <button onclick="next()">Siguiente →</button>
+</div>
+
+<script>
+  const TOTAL = 10;
+  let current = 0;
+
+  const slider  = document.getElementById('slider');
+  const counter = document.getElementById('slide-counter');
+  const dotsEl  = document.getElementById('dots');
+
+  // build dots
+  for (let i = 0; i < TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    current = Math.max(0, Math.min(TOTAL - 1, n));
+    slider.style.transform = `translateX(-${current * 100}vw)`;
+    counter.textContent = `${current + 1} / ${TOTAL}`;
+    document.querySelectorAll('.dot').forEach((d, i) =>
+      d.classList.toggle('active', i === current));
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                   { e.preventDefault(); prev(); }
+  });
+
+  // touch / swipe
+  let startX = null;
+  document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
+    startX = null;
+  });
+</script>
+</body>
+</html>
